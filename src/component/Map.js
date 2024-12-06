@@ -9,28 +9,29 @@ const Map = () => {
   const [foodItems, setFoodItems] = useState([]); // Stocker les positions fixes des blobs "food"
 
   useEffect(() => {
-    // Initialisation de la connexion au serveur
     const newSocket = io("http://localhost:3001");
     setSocket(newSocket);
 
-    // Enregistrer l'utilisateur après la connexion
+    // Calculer la position centrale de l'écran
+    const screenCenter = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    };
+
     newSocket.on("connect", () => {
-      newSocket.emit("register"); // Envoi du signal "register"
+      // Enregistrer avec la position centrale comme position initiale
+      newSocket.emit("register", { initialX: screenCenter.x, initialY: screenCenter.y });
     });
 
-    // Confirmation d'enregistrement
     newSocket.on("register-ok", (data) => {
       console.log("Registration successful:", data);
     });
 
-    // Mise à jour de la liste des joueurs après l'arrivée d'un nouveau joueur
     newSocket.on("new-player", ({ players: updatedPlayers }) => {
       setPlayers(updatedPlayers);
     });
 
-    // Gestion des mouvements des ennemis
     newSocket.on("ennemy-move", ({ id, x, y }) => {
-      console.log("Enemy move received:", { id, x, y });
       setPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
           player.id === id ? { ...player, x, y } : player
@@ -38,7 +39,6 @@ const Map = () => {
       );
     });
 
-    // Gestion des mouvements du joueur (réception de la position depuis le serveur)
     newSocket.on("player-move", ({ id, x, y }) => {
       setPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
@@ -47,10 +47,9 @@ const Map = () => {
       );
     });
 
-    // Nettoyage lors du démontage
     return () => {
       newSocket.disconnect();
-      setSocket(null); // Réinitialiser l'état du socket
+      setSocket(null);
     };
   }, []);
 
@@ -63,23 +62,18 @@ const Map = () => {
         color: "#" + Math.floor(Math.random() * 16777215).toString(16), // Couleur aléatoire
       }));
     };
-
-    // Initialisation des positions et couleurs
     setFoodItems(generateFood());
   }, []); // Exécuté uniquement lors du montage
 
   const handleMouseMove = (e) => {
-    const gridWidth = window.innerWidth;
-    const gridHeight = window.innerHeight;
+    const gridWidth = window.innerWidth/2;
+    const gridHeight = window.innerHeight/2;
 
-    // Calculer la position relative en fonction du mouvement de la souris
     const newBackgroundX = (e.clientX / gridWidth) * 1000;
     const newBackgroundY = (e.clientY / gridHeight) * 1000;
 
-    // Mettre à jour l'arrière-plan en fonction du mouvement de la souris
     setBackgroundPosition({ x: newBackgroundX, y: newBackgroundY });
 
-    // Émettre les coordonnées relatives au serveur
     if (socket) {
       socket.emit("move", {
         x: newBackgroundX,
@@ -91,14 +85,17 @@ const Map = () => {
   return (
     <div
       style={{
-        position: "relative",
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)", // Centre le div horizontalement et verticalement
         width: "100vw",
         height: "100vh",
         overflow: "hidden",
         backgroundColor: "#f0f0f0",
-        backgroundPosition: `${backgroundPosition.x}px ${backgroundPosition.y}px`, // Déplacement du fond
-        backgroundSize: "cover", // Assurez-vous que l'image de fond couvre toute la zone
-        transition: "background-position 0.1s ease-out", // Animation du déplacement du fond
+        backgroundPosition: `${backgroundPosition.x}px ${backgroundPosition.y}px`,
+        backgroundSize: "cover",
+        transition: "background-position 0.1s ease-out",
       }}
       onMouseMove={handleMouseMove}
     >
@@ -109,11 +106,11 @@ const Map = () => {
             key={`main-${player.id}`}
             id={player.id}
             color={player.color}
-            x={player.x || 0} // Position du Blob Joueur (fixé au centre)
+            x={player.x || 0}
             y={player.y || 0}
             size={50} // Taille du Blob principal
           />
-
+  
           {/* 200 Blobs secondaires - Food */}
           {foodItems.map((foodItem, index) => (
             <Blob
@@ -129,6 +126,7 @@ const Map = () => {
       ))}
     </div>
   );
+  
 };
 
 export default Map;
