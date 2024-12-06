@@ -47,12 +47,24 @@ const Map = () => {
       blobFeeds();
     });
 
-    const checkPlayerCollision = (blobA, blobB) => {
+
+    /* Fonctions pour gérer les collisions et leur conséquences à savoir :
+      - augmentation de la taille du blob (+5 si c'est un food +N si c'est un autre blob (N étant la taille du blob))
+      - suppression du blob mangé
+
+      Leur logique est bonne normalement, la propriété size (NaN) qui pose problème ce qui fait les fonctions de gestion de collisions 
+      retournent tj false.
+      Essayé de passer par width pour court-circuiter ce problème, mais ça ne fonctionne tj pas
+
+    */
+
+    const checkPlayerCollision = (blobA, blobB) => {    
       
       const dx = blobA.x/1000 - blobB.x/1000;
       const dy = blobA.y/1000 - blobB.y/1000;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      return distance < (blobA.width/2  + blobB.width/2);
+      console.log("blobA",blobA.size)
+      return distance < (blobA.size/2  + blobB.size/2);
     };
 
     const checkCollisionWithFood = (player, food) => {
@@ -62,15 +74,15 @@ const Map = () => {
       return distance < (player.width/2 + food.width/2) ;
     };
 
+    
+
     const blobFeeds = () => {
-      console.log("entrée fonction feed")
       setPlayers((prevPlayers) => {
         const updatedPlayers = [...prevPlayers];
         const foodToRemove = []; 
 
         updatedPlayers.forEach((blobA) => {
           foodItems.forEach((blobB, index) => {
-            console.log("entrée if feed")
             if (blobB.id.includes("food") && checkCollisionWithFood(blobA, blobB)) {
               blobA.width += 5; 
               blobA.height +=5;
@@ -78,21 +90,21 @@ const Map = () => {
             }
           });
           
-          updatedPlayers.forEach((blobB) => {
-            console.log("entrée fonction joueur")
+        updatedPlayers.forEach((blobA, indexA) => {
+          players.slice(indexA + 1).forEach((blobB) => {
             if (checkPlayerCollision(blobA, blobB)) {
-              console.log("entrée if joueur")
               const biggerBlob = blobA.width > blobB.width ? blobA : blobB;
               const smallerBlob = blobA.width <= blobB.width ? blobA : blobB;
-
-              
+        
               setPlayers((prevPlayers) =>
                 prevPlayers.filter((player) => player.id !== smallerBlob.id)
               );
-              
               biggerBlob.width += smallerBlob.width;
             }
           });
+        });
+        
+          
         });
 
         
