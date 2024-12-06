@@ -6,9 +6,8 @@ const cors = require("cors");
 const app = express();
 const server = http.createServer(app);
 
-// Configuration CORS pour autoriser les connexions WebSocket et HTTP depuis localhost:3000
 const corsOptions = {
-  origin: "http://localhost:3000", // Frontend React
+  origin: "http://localhost:3000", 
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
   credentials: true,
@@ -18,9 +17,8 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-app.use(cors(corsOptions)); // Appliquer le middleware CORS
+app.use(cors(corsOptions)); 
 
-// Créer une instance de socket.io avec configuration CORS
 const io = socketIo(server, {
   cors: {
     origin: "http://localhost:3000",
@@ -30,13 +28,11 @@ const io = socketIo(server, {
   },
 });
 
-let players = []; // Tableau pour garder la liste des joueurs et ennemis
+let players = []; 
 
-// Gérer la connexion d'un joueur
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
-  // Enregistrer un nouveau joueur avec une position initiale
   socket.on("register", ({ initialX, initialY }) => {
     const newPlayer = {
       id: socket.id,
@@ -54,11 +50,10 @@ io.on("connection", (socket) => {
       isPlayer: false,
     };
 
-    players.push(newPlayer, newEnemy); // Ajouter le joueur et l'ennemi au tableau
-    io.emit("new-player", { players }); // Diffuser la liste des joueurs
+    players.push(newPlayer, newEnemy); 
+    io.emit("new-player", { players }); 
   });
 
-  // Mettre à jour la position du joueur
   socket.on("move", ({ x, y }) => {
     players = players.map((player) =>
       player.id === socket.id
@@ -66,10 +61,9 @@ io.on("connection", (socket) => {
         : player
     );
 
-    io.emit("player-move", { id: socket.id, x, y }); // Diffuser les nouvelles positions
+    io.emit("player-move", { id: socket.id, x, y }); 
   });
 
-  // Mouvements des ennemis (mouvements aléatoires toutes les 2 secondes)
   setInterval(() => {
     players.forEach((player) => {
       if (!player.isPlayer) {
@@ -90,7 +84,6 @@ io.on("connection", (socket) => {
     });
   }, 200);
 
-  // Déconnexion
   socket.on("disconnect", () => {
     players = players.filter((player) => player.id !== socket.id);
     io.emit("new-player", { players });
@@ -98,7 +91,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Lancer le serveur sur le port 3001
 server.listen(3001, () => {
   console.log("Server running on port 3001");
 });

@@ -9,7 +9,7 @@ const Blob = ({ id, color, x, y, size }) => {
     height: `${size}px`,
     backgroundColor: color,
     borderRadius: "50%",
-    transform: "translate(-50%, -50%)", // Centrer le blob autour de son point (x, y)
+    transform: "translate(-50%, -50%)", 
   };
 
   return <div id={id} style={blobStyle}></div>;

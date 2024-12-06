@@ -6,20 +6,18 @@ const Map = () => {
   const [players, setPlayers] = useState([]);
   const [socket, setSocket] = useState(null);
   const [backgroundPosition, setBackgroundPosition] = useState({ x: 0, y: 0 });
-  const [foodItems, setFoodItems] = useState([]); // Stocker les positions fixes des blobs "food"
+  const [foodItems, setFoodItems] = useState([]); 
 
   useEffect(() => {
     const newSocket = io("http://localhost:3001");
     setSocket(newSocket);
 
-    // Calculer la position centrale de l'écran
     const screenCenter = {
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
     };
 
     newSocket.on("connect", () => {
-      // Enregistrer avec la position centrale comme position initiale
       newSocket.emit("register", { initialX: screenCenter.x, initialY: screenCenter.y });
     });
 
@@ -32,7 +30,6 @@ const Map = () => {
     });
 
     newSocket.on("ennemy-move", ({ id, x, y }) => {
-      // Mettre à jour la position du joueur et vérifier les collisions après
       setPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
           player.id === id ? { ...player, x, y } : player
@@ -42,7 +39,6 @@ const Map = () => {
     });
 
     newSocket.on("player-move", ({ id, x, y }) => {
-      // Mettre à jour la position du joueur et vérifier les collisions après
       setPlayers((prevPlayers) =>
         prevPlayers.map((player) =>
           player.id === id ? { ...player, x, y } : player
@@ -52,59 +48,54 @@ const Map = () => {
     });
 
     const checkPlayerCollision = (blobA, blobB) => {
-      const dx = blobA.x - blobB.x;
-      const dy = blobA.y - blobB.y;
-      const distance = Math.sqrt(dx * dx + dy * dy) / 1000;
-      console.log(distance)
-      console.log(distance < (blobA.size + blobB.size) /2)
-      // Vérifier si la distance est inférieure à la somme des rayons des deux blobs
-      return distance < (blobA.size + blobB.size) / 2;
+      
+      const dx = blobA.x/1000 - blobB.x/1000;
+      const dy = blobA.y/1000 - blobB.y/1000;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance < (blobA.width/2  + blobB.width/2);
     };
 
     const checkCollisionWithFood = (player, food) => {
-      // Calculer la distance entre le joueur et la nourriture
-      const dx = player.x - food.x;
-      const dy = player.y - food.y;
-      const distance = Math.sqrt(dx * dx + dy * dy) / 1000;
-      console.log("Distance:", distance);  // Log de distance pour vérifier
-      // Vérifier si la distance est inférieure à la somme des rayons (taille / 2)
-      return distance < (player.size / 2 + 5 / 2); // Taille du joueur / 2 + Taille de la nourriture / 2
+      const dx = player.x/1000 - food.x/1000;
+      const dy = player.y/1000 - food.y/1000;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance < (player.width/2 + food.width/2) ;
     };
 
     const blobFeeds = () => {
+      console.log("entrée fonction feed")
       setPlayers((prevPlayers) => {
         const updatedPlayers = [...prevPlayers];
-        const foodToRemove = []; // Tableau pour collecter les indices des éléments à supprimer
+        const foodToRemove = []; 
 
         updatedPlayers.forEach((blobA) => {
-          // Vérifier les collisions avec la nourriture
           foodItems.forEach((blobB, index) => {
-            if (checkCollisionWithFood(blobA, blobB) && blobB.id.includes("food")) {
-              // Si un blob mange de la nourriture
-              blobA.size += 5; // Augmenter la taille du blob
-              foodToRemove.push(index); // Ajouter l'index à supprimer
-              console.log("Nourriture supprimée");
+            console.log("entrée if feed")
+            if (blobB.id.includes("food") && checkCollisionWithFood(blobA, blobB)) {
+              blobA.width += 5; 
+              blobA.height +=5;
+              foodToRemove.push(index); 
             }
           });
-
-          // Vérifier les collisions entre les blobs joueurs
+          
           updatedPlayers.forEach((blobB) => {
-            if (blobA.id !== blobB.id && checkPlayerCollision(blobA, blobB)) {
-              // Si deux blobs se rencontrent, le plus grand mange le plus petit
-              const biggerBlob = blobA.size > blobB.size ? blobA : blobB;
-              const smallerBlob = blobA.size <= blobB.size ? blobA : blobB;
+            console.log("entrée fonction joueur")
+            if (checkPlayerCollision(blobA, blobB)) {
+              console.log("entrée if joueur")
+              const biggerBlob = blobA.width > blobB.width ? blobA : blobB;
+              const smallerBlob = blobA.width <= blobB.width ? blobA : blobB;
 
-              // Supprimer le plus petit blob
+              
               setPlayers((prevPlayers) =>
                 prevPlayers.filter((player) => player.id !== smallerBlob.id)
               );
-              // Augmenter la taille du blob plus grand
-              biggerBlob.size += smallerBlob.size;
+              
+              biggerBlob.width += smallerBlob.width;
             }
           });
         });
 
-        // Supprimer la nourriture après la boucle
+        
         setFoodItems((prevFoodItems) =>
           prevFoodItems.filter((item, i) => !foodToRemove.includes(i))
         );
@@ -117,20 +108,21 @@ const Map = () => {
       newSocket.disconnect();
       setSocket(null);
     };
-  }, []); // Le useEffect ne dépend plus de players et foodItems, il est exécuté uniquement au montage
+  }, []); 
 
-  // Générer des positions fixes pour les Blobs secondaires (food)
+  
   useEffect(() => {
     const generateFood = () => {
       return Array.from({ length: 200 }, (_, index) => ({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        color: "#" + Math.floor(Math.random() * 16777215).toString(16), // Couleur aléatoire
+        color: "#" + Math.floor(Math.random() * 16777215).toString(16), 
         id: `food-${index}`,
+        size: 10, 
       }));
     };
     setFoodItems(generateFood());
-  }, []); // Exécuté uniquement lors du montage
+  }, []); 
 
   const handleMouseMove = (e) => {
     const gridWidth = window.innerWidth / 2;
@@ -155,7 +147,7 @@ const Map = () => {
         position: "absolute",
         top: "50%",
         left: "50%",
-        transform: "translate(-50%, -50%)", // Centre le div horizontalement et verticalement
+        transform: "translate(-50%, -50%)", 
         width: "100vw",
         height: "100vh",
         overflow: "hidden",
@@ -168,17 +160,15 @@ const Map = () => {
     >
       {players.map((player) => (
         <>
-          {/* Blob principal - Joueur */}
           <Blob
             key={`main-${player.id}`}
             id={player.id}
             color={player.color}
             x={player.x || 0}
             y={player.y || 0}
-            size={player.size || 50} // Taille du Blob principal
+            size={player.size || 50} 
           />
   
-          {/* 200 Blobs secondaires - Food */}
           {foodItems.map((foodItem) => (
             <Blob
               key={foodItem.id}
@@ -186,7 +176,7 @@ const Map = () => {
               color={foodItem.color}
               x={foodItem.x}
               y={foodItem.y}
-              size={10} // Taille des Blobs "food"
+              size={foodItem.size} 
             />
           ))}
         </>
